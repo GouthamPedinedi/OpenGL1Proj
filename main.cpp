@@ -1,8 +1,9 @@
 #include <iostream>
 #include <glad.h>
 #include <GLFW/glfw3.h>
-#include "shaderClass.h"
 #include <stb/stb_image.h>
+#include "shaderClass.h"
+#include "Texture.h"
 #include "VAO.h"
 #include "VBO.h"
 #include "EBO.h"
@@ -11,11 +12,11 @@ using std::endl;
 
 GLfloat vertices[] =
 {
-//        COORDINATES                 /    COLORS 
-	-0.5f, -0.5f, 0.0f,      1.0f,  0.0f, 0.0f,    0.0f, 0.0f, //Lower Left Corner
-	-0.5f, 0.5f, 0.0f,       0.0f, 1.0f, 0.0f,  0.0f, 1.0f, //Upper Left Corner
-	0.5f, 0.5f, 0.0f,     0.0f, 0.0f, 1.0f,   1.0f, 1.0f, //Upper Right Corner
-	0.5f, -0.5f, 0.0f,    1.0f, 1.0f, 1.0f,    1.0f, 0.0f //Lower Left Corner
+	//        COORDINATES            /    COLORS    /    TexCoords 
+		-0.5f, -0.5f, 0.0f,      1.0f,  0.0f, 0.0f,    0.0f, 0.0f, //Lower Left Corner
+		-0.5f, 0.5f, 0.0f,       0.0f, 1.0f, 0.0f,     0.0f, 1.0f, //Upper Left Corner
+		0.5f, 0.5f, 0.0f,        0.0f, 0.0f, 1.0f,     1.0f, 1.0f, //Upper Right Corner
+		0.5f, -0.5f, 0.0f,       1.0f, 1.0f, 1.0f,     1.0f, 0.0f //Lower Left Corner
 };
 GLuint indices[] =
 {
@@ -73,28 +74,9 @@ int main()
 	//Gets ID of uniform called 'scale'
 	GLuint uniID = glGetUniformLocation(shaderProgram.ID, "scale");
 	//Texture
-	int widthImg, heightImg, numColCh;
-	stbi_set_flip_vertically_on_load(true);
-	unsigned char* bytes = stbi_load("beluga.jpg", &widthImg, &heightImg, &numColCh, 0);
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	Texture beluga("beluga.jpg", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
+	beluga.texUnit(shaderProgram, "tex0", 0);
 
-//  float flatColor[] = {1.0f, 1.0f, 1.0f, 1.0f}
-//  glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, flatColor);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, widthImg, heightImg, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	stbi_image_free(bytes);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	GLuint tex0Uni = glGetUniformLocation(shaderProgram.ID, "tex0");
-	shaderProgram.Activate();
-	glUniform1i(tex0Uni, 0);
 	//Main while loop
 	while(!glfwWindowShouldClose(window))
 	{
@@ -106,7 +88,8 @@ int main()
 		shaderProgram.Activate();
 		//To assign a value to the uniform. Must always be done after activating the Shader Program
 		glUniform1f(uniID, 0.5f);
-		glBindTexture(GL_TEXTURE_2D, texture);
+		//To bind the texture so that it appears
+		beluga.Bind();
 		//To bind the VAO so OpenGL knows how to use it
 		VAO1.Bind();
 		//To draw the triangle using the GL_TRIANGLES primitive
@@ -120,7 +103,7 @@ int main()
 	VAO1.Delete();
 	VBO1.Delete();
 	EBO1.Delete();
-	glDeleteTextures(1, &texture);
+	beluga.Delete();
 	shaderProgram.Delete();
 	//To close window before ending program
 	glfwDestroyWindow(window);
